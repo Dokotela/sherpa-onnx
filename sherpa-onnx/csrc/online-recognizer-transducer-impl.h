@@ -133,7 +133,7 @@ class OnlineRecognizerTransducerImpl : public OnlineRecognizerImpl {
     } else {
       SHERPA_ONNX_LOGE("Unsupported decoding method: %s",
                        config.decoding_method.c_str());
-      exit(-1);
+      SHERPA_ONNX_EXIT(-1);
     }
 
     if (model_->UseWhisperFeature()) {
@@ -188,7 +188,7 @@ class OnlineRecognizerTransducerImpl : public OnlineRecognizerImpl {
     } else {
       SHERPA_ONNX_LOGE("Unsupported decoding method: %s",
                        config.decoding_method.c_str());
-      exit(-1);
+      SHERPA_ONNX_EXIT(-1);
     }
 
     if (model_->UseWhisperFeature()) {
@@ -444,7 +444,7 @@ class OnlineRecognizerTransducerImpl : public OnlineRecognizerImpl {
     if (!is) {
       SHERPA_ONNX_LOGE("Open hotwords file failed: %s",
                        config_.hotwords_file.c_str());
-      exit(-1);
+      SHERPA_ONNX_EXIT(-1);
     }
 
     if (!EncodeHotwords(is, config_.model_config.modeling_unit, sym_,
@@ -468,7 +468,7 @@ class OnlineRecognizerTransducerImpl : public OnlineRecognizerImpl {
     if (!is) {
       SHERPA_ONNX_LOGE("Open hotwords file failed: %s",
                        config_.hotwords_file.c_str());
-      exit(-1);
+      SHERPA_ONNX_EXIT(-1);
     }
 
     if (!EncodeHotwords(is, config_.model_config.modeling_unit, sym_,
