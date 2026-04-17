@@ -24,6 +24,13 @@ std::vector<OfflineCtcDecoderResult> OfflineCtcGreedySearchDecoder::Decode(
   std::vector<OfflineCtcDecoderResult> ans;
   ans.reserve(batch_size);
 
+  // Reusable per-frame buffer for LogSoftmax. The input tensor may already
+  // be log-probs (e.g. Zipformer CTC) or raw logits (e.g. SenseVoice). Running
+  // LogSoftmax on a copy makes the stored values consistent across both paths
+  // (true log-probabilities, where 0 = certain) and is idempotent (within
+  // float precision) for inputs that were already normalized.
+  std::vector<float> frame_log_probs(vocab_size);
+
   for (int32_t b = 0; b != batch_size; ++b) {
     const float *p_log_probs =
         log_probs.GetTensorData<float>() + b * num_frames * vocab_size;
@@ -34,13 +41,17 @@ std::vector<OfflineCtcDecoderResult> OfflineCtcGreedySearchDecoder::Decode(
     for (int32_t t = 0; t != static_cast<int32_t>(p_log_probs_length[b]); ++t) {
       int32_t idx = MaxElementIndex(p_log_probs, vocab_size);
       auto y = static_cast<int64_t>(idx);
-      float log_prob = p_log_probs[idx];
 
       if (y != blank_id_ && y != prev_id) {
+        std::copy(p_log_probs, p_log_probs + vocab_size,
+                  frame_log_probs.begin());
+        LogSoftmax(frame_log_probs.data(), vocab_size);
+
         r.tokens.push_back(y);
         r.timestamps.push_back(t);
-        r.token_log_probs.push_back(log_prob);
-        r.vocab_log_probs.emplace_back(p_log_probs, p_log_probs + vocab_size);
+        r.token_log_probs.push_back(frame_log_probs[idx]);
+        r.vocab_log_probs.emplace_back(frame_log_probs.begin(),
+                                       frame_log_probs.end());
       }
 
       p_log_probs += vocab_size;

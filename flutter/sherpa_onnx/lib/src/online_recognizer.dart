@@ -371,24 +371,30 @@ class OnlineRecognizerConfig {
 /// Streaming recognition result returned by [OnlineRecognizer.getResult].
 class OnlineRecognizerResult {
   OnlineRecognizerResult(
-      {required this.text, required this.tokens, required this.timestamps, this.ysProbs = const <double>[]});
+      {required this.text, required this.tokens, required this.timestamps,
+       this.ysProbs = const <double>[], this.vocabLogProbs});
 
   factory OnlineRecognizerResult.fromJson(Map<String, dynamic> json) {
     return OnlineRecognizerResult(
-      text: json['text'] as String? ?? '',
-      tokens: (json['tokens'] as List?)?.cast<String>().toList() ?? const <String>[],
-      timestamps: (json['timestamps'] as List?)
-          ?.map<double>((e) => (e as num).toDouble())
-          .toList() ?? const <double>[],
+      text: json['text'] as String,
+      tokens: List<String>.from(json['tokens'] as List),
+      timestamps: (json['timestamps'] as List)
+          .map<double>((e) => (e as num).toDouble())
+          .toList(),
       ysProbs: (json['ys_probs'] as List?)
           ?.map<double>((e) => (e as num).toDouble())
           .toList() ?? const <double>[],
+      vocabLogProbs: (json['vocab_log_probs'] as List?)
+          ?.map((row) => (row as List)
+              .map((e) => (e as num).toDouble())
+              .toList())
+          .toList(),
     );
   }
 
   @override
   String toString() {
-    return 'OnlineRecognizerResult(text: $text, tokens: $tokens, timestamps: $timestamps, ysProbs: $ysProbs)';
+    return 'OnlineRecognizerResult(text: $text, tokens: $tokens, timestamps: $timestamps)';
   }
 
   Map<String, dynamic> toJson() => {
@@ -396,12 +402,14 @@ class OnlineRecognizerResult {
         'tokens': tokens,
         'timestamps': timestamps,
         'ys_probs': ysProbs,
+        if (vocabLogProbs != null) 'vocab_log_probs': vocabLogProbs,
       };
 
   final String text;
   final List<String> tokens;
   final List<double> timestamps;
   final List<double> ysProbs;
+  final List<List<double>>? vocabLogProbs;
 }
 
 /// Streaming speech recognizer.
@@ -605,29 +613,6 @@ class OnlineRecognizer {
     return OnlineRecognizerResult.fromJson(
       parsedJson as Map<String, dynamic>,
     );
-  }
-
-  /// Fetch the full vocabulary log-probability distributions for [stream].
-  ///
-  /// Returns a list of lists, where each inner list is the log-probability
-  /// distribution over the vocabulary for one emitted token.  Returns `null`
-  /// if no vocab_log_probs are available.
-  List<List<double>>? getVocabLogProbs(OnlineStream stream) {
-    final getFunc = SherpaOnnxBindings.getOnlineStreamResult;
-    final destroyFunc = SherpaOnnxBindings.destroyOnlineRecognizerResult;
-    if (getFunc == null || destroyFunc == null) return null;
-
-    if (ptr == nullptr || stream.ptr == nullptr) return null;
-
-    final resultPtr = getFunc(ptr, stream.ptr);
-    if (resultPtr == nullptr) return null;
-
-    final ref = resultPtr.ref;
-    final probs = readVocabLogProbsFromResult(
-        ref.vocabLogProbs, ref.count, ref.vocabSize);
-
-    destroyFunc(resultPtr);
-    return probs;
   }
 
   /// Reset stream state after an endpoint or utterance boundary.

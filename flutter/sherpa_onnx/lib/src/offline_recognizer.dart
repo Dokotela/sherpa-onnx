@@ -931,6 +931,7 @@ class OfflineRecognizerResult {
     required this.lang,
     required this.emotion,
     required this.event,
+    this.vocabLogProbs,
   });
 
   factory OfflineRecognizerResult.fromJson(Map<String, dynamic> json) {
@@ -949,6 +950,11 @@ class OfflineRecognizerResult {
       lang: json['lang'] as String? ?? '',
       emotion: json['emotion'] as String? ?? '',
       event: json['event'] as String? ?? '',
+      vocabLogProbs: (json['vocab_log_probs'] as List?)
+          ?.map((row) => (row as List)
+              .map((e) => (e as num).toDouble())
+              .toList())
+          .toList(),
     );
   }
 
@@ -965,6 +971,7 @@ class OfflineRecognizerResult {
     'lang': lang,
     'emotion': emotion,
     'event': event,
+    if (vocabLogProbs != null) 'vocab_log_probs': vocabLogProbs,
   };
 
   final String text;
@@ -974,6 +981,7 @@ class OfflineRecognizerResult {
   final String lang;
   final String emotion;
   final String event;
+  final List<List<double>>? vocabLogProbs;
 }
 
 /// Offline speech recognizer.
@@ -1004,23 +1012,23 @@ class OfflineRecognizer {
 
   /// Create a recognizer from [config].
   factory OfflineRecognizer(OfflineRecognizerConfig config) {
+    final c = convertConfig(config);
+
     if (SherpaOnnxBindings.createOfflineRecognizer == null) {
       throw Exception("Please initialize sherpa-onnx first");
     }
 
-    final c = convertConfig(config);
+    final ptr = SherpaOnnxBindings.createOfflineRecognizer?.call(c) ?? nullptr;
 
-    try {
-      final ptr = SherpaOnnxBindings.createOfflineRecognizer!.call(c);
-      if (ptr == nullptr) {
-        throw Exception(
-          "Failed to create offline recognizer. Please check your config",
-        );
-      }
-      return OfflineRecognizer._(ptr: ptr, config: config);
-    } finally {
-      freeConfig(c);
+    if (ptr == nullptr) {
+      throw Exception(
+        "Failed to create offline recognizer. Please check your config",
+      );
     }
+
+    freeConfig(c);
+
+    return OfflineRecognizer._(ptr: ptr, config: config);
   }
 
   /// Replace the runtime configuration.
@@ -1034,11 +1042,10 @@ class OfflineRecognizer {
     }
 
     final c = convertConfig(config);
-    try {
-      SherpaOnnxBindings.offlineRecognizerSetConfig?.call(ptr, c);
-    } finally {
-      freeConfig(c);
-    }
+
+    SherpaOnnxBindings.offlineRecognizerSetConfig?.call(ptr, c);
+
+    freeConfig(c);
     // we don't update this.config
   }
 
@@ -1311,29 +1318,6 @@ class OfflineRecognizer {
     }
 
     SherpaOnnxBindings.decodeOfflineStream?.call(ptr, stream.ptr);
-  }
-
-  /// Fetch the full vocabulary log-probability distributions for [stream].
-  ///
-  /// Returns a list of lists, where each inner list is the log-probability
-  /// distribution over the vocabulary for one emitted token.  Returns `null`
-  /// if no vocab_log_probs are available.
-  List<List<double>>? getVocabLogProbs(OfflineStream stream) {
-    final getFunc = SherpaOnnxBindings.getOfflineStreamResult;
-    final destroyFunc = SherpaOnnxBindings.destroyOfflineRecognizerResult;
-    if (getFunc == null || destroyFunc == null) return null;
-
-    if (ptr == nullptr || stream.ptr == nullptr) return null;
-
-    final resultPtr = getFunc(stream.ptr);
-    if (resultPtr == nullptr) return null;
-
-    final ref = resultPtr.ref;
-    final probs = readVocabLogProbsFromResult(
-        ref.vocabLogProbs, ref.count, ref.vocabSize);
-
-    destroyFunc(resultPtr);
-    return probs;
   }
 
   /// Fetch the current recognition result for [stream].

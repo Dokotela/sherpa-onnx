@@ -480,17 +480,6 @@ std::string OfflineRecognitionResult::AsJsonString() const {
   }
   os << "], ";
 
-  // Serialize ys_log_probs (token-level confidence scores)
-  if (!ys_log_probs.empty()) {
-    os << "\"ys_log_probs\": [";
-    sep = "";
-    for (auto prob : ys_log_probs) {
-      os << sep << std::fixed << std::setprecision(6) << prob;
-      sep = ", ";
-    }
-    os << "], ";
-  }
-
   sep = "";
 
   os << "\""
@@ -528,6 +517,23 @@ std::string OfflineRecognitionResult::AsJsonString() const {
     sep = "";
     for (const auto &t : segment_texts) {
       os << sep << std::quoted(t);
+      sep = ", ";
+    }
+    os << "]";
+  }
+
+  // Serialize vocab_log_probs as 2D array if present
+  if (!vocab_log_probs.empty()) {
+    os << ", \"vocab_log_probs\": [";
+    sep = "";
+    for (const auto &row : vocab_log_probs) {
+      os << sep << "[";
+      std::string inner_sep = "";
+      for (auto v : row) {
+        os << inner_sep << std::fixed << std::setprecision(6) << v;
+        inner_sep = ", ";
+      }
+      os << "]";
       sep = ", ";
     }
     os << "]";

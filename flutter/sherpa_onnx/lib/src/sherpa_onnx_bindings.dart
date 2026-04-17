@@ -824,61 +824,6 @@ final class SherpaOnnxSpokenLanguageIdentificationResult extends Struct {
 
 final class SherpaOnnxSpokenLanguageIdentification extends Opaque {}
 
-/// FFI struct for the online recognizer result (mirrors C API struct layout).
-final class SherpaOnnxOnlineRecognizerResultNative extends Struct {
-  external Pointer<Utf8> text;
-  external Pointer<Utf8> tokens;
-  external Pointer<Pointer<Utf8>> tokensArr;
-  external Pointer<Float> timestamps;
-  @Int32()
-  external int count;
-  external Pointer<Utf8> json;
-  external Pointer<Float> vocabLogProbs;
-  @Int32()
-  external int vocabSize;
-}
-
-/// FFI struct for the offline recognizer result (mirrors C API struct layout).
-final class SherpaOnnxOfflineRecognizerResultNative extends Struct {
-  external Pointer<Utf8> text;
-  external Pointer<Float> timestamps;
-  @Int32()
-  external int count;
-  external Pointer<Utf8> tokens;
-  external Pointer<Pointer<Utf8>> tokensArr;
-  external Pointer<Utf8> json;
-  external Pointer<Utf8> lang;
-  external Pointer<Utf8> emotion;
-  external Pointer<Utf8> event;
-  external Pointer<Float> durations;
-  external Pointer<Float> ysLogProbs;
-  external Pointer<Float> segmentTimestamps;
-  external Pointer<Float> segmentDurations;
-  external Pointer<Utf8> segmentTexts;
-  external Pointer<Pointer<Utf8>> segmentTextsArr;
-  @Int32()
-  external int segmentCount;
-  external Pointer<Float> vocabLogProbs;
-  @Int32()
-  external int vocabSize;
-}
-
-/// Read vocab_log_probs from a native result struct into a Dart list-of-lists.
-/// Returns `null` when vocab_log_probs is null or sizes are invalid.
-List<List<double>>? readVocabLogProbsFromResult(
-  Pointer<Float> vocabLogProbs,
-  int count,
-  int vocabSize,
-) {
-  if (vocabLogProbs == nullptr || count <= 0 || vocabSize <= 0) {
-    return null;
-  }
-
-  final flat = vocabLogProbs.asTypedList(count * vocabSize);
-  return List.generate(count, (i) =>
-      List<double>.generate(vocabSize, (j) => flat[i * vocabSize + j]));
-}
-
 final class SherpaOnnxOfflineSpeechDenoiser extends Opaque {}
 
 final class SherpaOnnxOnlineSpeechDenoiser extends Opaque {}
@@ -1901,25 +1846,6 @@ typedef SherpaOnnxGetGitSha1 = SherpaOnnxGetGitSha1Native;
 typedef SherpaOnnxGetGitDateNative = Pointer<Utf8> Function();
 typedef SherpaOnnxGetGitDate = SherpaOnnxGetGitDateNative;
 
-typedef SherpaOnnxGetOnlineStreamResultNative
-    = Pointer<SherpaOnnxOnlineRecognizerResultNative> Function(
-        Pointer<SherpaOnnxOnlineRecognizer> recognizer,
-        Pointer<SherpaOnnxOnlineStream> stream);
-
-typedef SherpaOnnxDestroyOnlineRecognizerResultNative = Void Function(
-    Pointer<SherpaOnnxOnlineRecognizerResultNative> r);
-typedef SherpaOnnxDestroyOnlineRecognizerResultDart = void Function(
-    Pointer<SherpaOnnxOnlineRecognizerResultNative> r);
-
-typedef SherpaOnnxGetOfflineStreamResultNative
-    = Pointer<SherpaOnnxOfflineRecognizerResultNative> Function(
-        Pointer<SherpaOnnxOfflineStream> stream);
-
-typedef SherpaOnnxDestroyOfflineRecognizerResultNative = Void Function(
-    Pointer<SherpaOnnxOfflineRecognizerResultNative> r);
-typedef SherpaOnnxDestroyOfflineRecognizerResultDart = void Function(
-    Pointer<SherpaOnnxOfflineRecognizerResultNative> r);
-
 class SherpaOnnxBindings {
   static SherpaOnnxCreateOfflineSpeechDenoiser?
   sherpaOnnxCreateOfflineSpeechDenoiser;
@@ -2160,13 +2086,6 @@ class SherpaOnnxBindings {
   static SherpaOnnxGetVersionStr? getVersionStr;
   static SherpaOnnxGetGitSha1? getGitSha1;
   static SherpaOnnxGetGitDate? getGitDate;
-
-  static SherpaOnnxGetOnlineStreamResultNative? getOnlineStreamResult;
-  static SherpaOnnxDestroyOnlineRecognizerResultDart?
-      destroyOnlineRecognizerResult;
-  static SherpaOnnxGetOfflineStreamResultNative? getOfflineStreamResult;
-  static SherpaOnnxDestroyOfflineRecognizerResultDart?
-      destroyOfflineRecognizerResult;
 
   static void init(DynamicLibrary dynamicLibrary) {
     sherpaOnnxCreateOfflineSpeechDenoiser ??= dynamicLibrary
@@ -2939,30 +2858,6 @@ class SherpaOnnxBindings {
     getGitDate ??= dynamicLibrary
         .lookup<NativeFunction<SherpaOnnxGetGitDateNative>>(
           'SherpaOnnxGetGitDate',
-        )
-        .asFunction();
-
-    getOnlineStreamResult ??= dynamicLibrary
-        .lookup<NativeFunction<SherpaOnnxGetOnlineStreamResultNative>>(
-          'SherpaOnnxGetOnlineStreamResult',
-        )
-        .asFunction();
-
-    destroyOnlineRecognizerResult ??= dynamicLibrary
-        .lookup<NativeFunction<SherpaOnnxDestroyOnlineRecognizerResultNative>>(
-          'SherpaOnnxDestroyOnlineRecognizerResult',
-        )
-        .asFunction();
-
-    getOfflineStreamResult ??= dynamicLibrary
-        .lookup<NativeFunction<SherpaOnnxGetOfflineStreamResultNative>>(
-          'SherpaOnnxGetOfflineStreamResult',
-        )
-        .asFunction();
-
-    destroyOfflineRecognizerResult ??= dynamicLibrary
-        .lookup<NativeFunction<SherpaOnnxDestroyOfflineRecognizerResultNative>>(
-          'SherpaOnnxDestroyOfflineRecognizerResult',
         )
         .asFunction();
   }

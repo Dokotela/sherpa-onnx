@@ -80,6 +80,24 @@ std::string OnlineRecognizerResult::AsJsonString() const {
      << ", ";
   os << "\"is_final\": " << (is_final ? "true" : "false") << ", ";
   os << "\"is_eof\": " << (is_eof ? "true" : "false");
+
+  // Serialize vocab_log_probs as 2D array if present
+  if (!vocab_log_probs.empty()) {
+    os << ", \"vocab_log_probs\": [";
+    std::string vlp_sep = "";
+    for (const auto &row : vocab_log_probs) {
+      os << vlp_sep << "[";
+      std::string inner_sep = "";
+      for (auto v : row) {
+        os << inner_sep << std::fixed << std::setprecision(6) << v;
+        inner_sep = ", ";
+      }
+      os << "]";
+      vlp_sep = ", ";
+    }
+    os << "]";
+  }
+
   os << "}";
   return os.str();
 }
